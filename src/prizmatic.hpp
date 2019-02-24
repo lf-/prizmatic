@@ -22,23 +22,46 @@ namespace {
 Step saved_steps[100];
 uint8_t n_saved_steps;
 
-const uint8_t signal_switch_pin = 17;  // Port A1
-const uint8_t turn_pin = 15;           // Port A2
-const uint8_t fwd_rev_pin = 16;        // Port A3
+uint8_t const signal_switch_pin = 17;  // Port A1
+uint8_t const turn_pin = 15;           // Port A2
+uint8_t const fwd_rev_pin = 16;        // Port A3
 }  // namespace
 
 class PRIZMatic : public PRIZM {
    public:
+    PRIZMatic();
     void drive_steps(long speed, std::initializer_list<Step> steps);
     void wait_for_start_button();
     void begin_rc_control(long speed);
     int8_t read_rc(uint8_t pin);
     void debug_controller();
     void send_steps();
+
+    // wrap the parent class to save invert state
+    void setMotorInvert(int channel, int invert);
+
+    bool channel_inverts[3];
 };
 
 template <typename T>
 int sgn(T val);
+
+PRIZMatic::PRIZMatic() : channel_inverts{false, false} {}
+
+void PRIZMatic::setMotorInvert(int channel, int invert) {
+    if (channel == 1 || channel == 2) {
+        this->channel_inverts[channel] = invert;
+        PRIZM::setMotorInvert(channel, invert);
+    }
+}
+
+int get_invert_factor(bool inv) {
+    if (inv) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
 
 void PRIZMatic::drive_steps(long speed, std::initializer_list<Step> steps) {
     for (auto step : steps) {
@@ -49,7 +72,9 @@ void PRIZMatic::drive_steps(long speed, std::initializer_list<Step> steps) {
         DBG(step.right);
 
         this->resetEncoders();
-        this->setMotorPowers(sgn(step.left) * 30, sgn(step.right) * 30);
+        this->setMotorSpeeds(
+            -sgn(step.left) * get_invert_factor(channel_inverts[1]) * speed,
+            -sgn(step.right) * get_invert_factor(channel_inverts[2]) * speed);
         bool done1 = false;
         bool done2 = false;
         while (!(done1 && done2)) {
@@ -184,15 +209,15 @@ void PRIZMatic::begin_rc_control(long speed) {
             }
         }
 
-        auto throttle = -read_rc(fwd_rev_pin);
-        auto turn = read_rc(turn_pin);
+        auto throttle = read_rc(fwd_rev_pin);
+        auto turn = -read_rc(turn_pin);
         // DBGN("throttle: ");
         // DBGN(throttle);
         // DBGN("turn: ");
         // DBG(turn);
         if (turn > switch_on || turn < switch_off) {
             auto turn_dir = sgn<int8_t>(turn);
-            this->setMotorPowers(speed * turn_dir, -speed * turn_dir);
+            this->setMotorSpeeds(speed * turn_dir, -speed * turn_dir);
             // we want to ignore throttle inputs when turning
             DBGN("turn dir:");
             DBG(turn_dir);
@@ -201,7 +226,7 @@ void PRIZMatic::begin_rc_control(long speed) {
 
         if (throttle > switch_on || throttle < switch_off) {
             auto motor_speed = speed * sgn<int8_t>(throttle);
-            this->setMotorPowers(motor_speed, motor_speed);
+            this->setMotorSpeeds(motor_speed, motor_speed);
             DBGN("Set motor speed:");
             DBG(motor_speed);
             continue;
@@ -209,4 +234,5 @@ void PRIZMatic::begin_rc_control(long speed) {
 
         this->setMotorSpeeds(0, 0);
     }
+    return;
 }
