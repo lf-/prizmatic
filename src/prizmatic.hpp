@@ -146,6 +146,7 @@ void PRIZMatic::begin_rc_control(long speed) {
      * same speed as would be automatically driven to attempt to ensure maximum
      * reproducibility.
      */
+    DBG("Beginning RC control");
 
     // change these if signalling switch doesn't work
     const int8_t switch_on = 50;
@@ -204,16 +205,16 @@ void PRIZMatic::begin_rc_control(long speed) {
             auto turn_dir = sgn<int8_t>(turn);
             this->setMotorSpeeds(speed * turn_dir, -speed * turn_dir);
             // we want to ignore throttle inputs when turning
-            DBGN("turn dir:");
-            DBG(turn_dir);
+            // DBGN("turn dir:");
+            // DBG(turn_dir);
             continue;
         }
 
         if (throttle > switch_on || throttle < switch_off) {
             auto motor_speed = speed * sgn<int8_t>(throttle);
             this->setMotorSpeeds(motor_speed, motor_speed);
-            DBGN("Set motor speed:");
-            DBG(motor_speed);
+            // DBGN("Set motor speed:");
+            // DBG(motor_speed);
             continue;
         }
 
