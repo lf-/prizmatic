@@ -72,30 +72,14 @@ void PRIZMatic::drive_steps(long speed, std::initializer_list<Step> steps) {
         DBG(step.right);
 
         this->resetEncoders();
-        this->setMotorSpeeds(
-            -sgn(step.left) * get_invert_factor(channel_inverts[1]) * speed,
-            -sgn(step.right) * get_invert_factor(channel_inverts[2]) * speed);
-        bool done1 = false;
-        bool done2 = false;
-        while (!(done1 && done2)) {
-            auto enccount1 = abs(this->readEncoderCount(1));
-            DBGN("enccount1: ");
-            DBG(enccount1);
-            if (enccount1 > abs(step.left)) {
-                DBG("DONE1");
-                this->setMotorPower(1, BRAKE);
-                done1 = true;
-            }
-            auto enccount2 = abs(this->readEncoderCount(2));
-            DBGN("enccount2: ");
-            DBG(enccount2);
-            if (enccount2 > abs(step.right)) {
-                DBG("DONE2");
-                this->setMotorPower(2, BRAKE);
-                done2 = true;
-            }
+        this->setMotorTargets(speed, step.left, speed, step.right);
+        while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
         }
         delay(500);
+        DBGN("ENCODER COUNTS AFTER MOVE: ");
+        DBGN(this->readEncoderCount(1));
+        DBGN(", ");
+        DBG(this->readEncoderCount(2));
     }
     this->resetEncoders();
     return;
@@ -191,10 +175,11 @@ void PRIZMatic::begin_rc_control(long speed) {
                 done = true;
             } else if (curr_time > timer_start + 50) {
                 DBG("Saving step...");
-                // we are negating this because motor 1 is intended to be
-                // inverted
-                saved_steps[n_saved_steps] = {this->readEncoderCount(1),
-                                              this->readEncoderCount(2)};
+                saved_steps[n_saved_steps] = {
+                    get_invert_factor(channel_inverts[1]) *
+                        this->readEncoderCount(1),
+                    get_invert_factor(channel_inverts[2]) *
+                        this->readEncoderCount(2)};
                 ++n_saved_steps;
                 this->resetEncoders();
                 timer_start = 0;
@@ -209,8 +194,8 @@ void PRIZMatic::begin_rc_control(long speed) {
             }
         }
 
-        auto throttle = read_rc(fwd_rev_pin);
-        auto turn = -read_rc(turn_pin);
+        auto throttle = -read_rc(fwd_rev_pin);
+        auto turn = read_rc(turn_pin);
         // DBGN("throttle: ");
         // DBGN(throttle);
         // DBGN("turn: ");
