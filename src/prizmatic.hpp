@@ -11,6 +11,12 @@
 #define DBGN(s)
 #endif
 
+#ifdef PRIZMATIC_TETRIX_MOTOR
+long degrees_in_counts(float degs) { return 1440.f * (degs / 360.f); }
+#else
+long degrees_in_counts(float degs) { return 3960.f * (degs / 360.f); }
+#endif
+
 int const BRAKE = 125;
 
 struct Step {
@@ -33,6 +39,7 @@ class PRIZMatic : public PRIZM {
     void drive_steps(long speed, std::initializer_list<Step> steps);
     void wait_for_start_button();
     void begin_rc_control(long speed);
+    void begin_rc_servo_test(uint8_t servonum);
     int8_t read_rc(uint8_t pin);
     void debug_controller();
     void send_steps();
@@ -121,7 +128,7 @@ int8_t PRIZMatic::read_rc(uint8_t pin) {
     if (pulseWidth == 0) {
         return 0;
     }
-    return (clamp<signed long>((pulseWidth - 1200), 0, 510) - 255) / 2;
+    return clamp<long>(map(pulseWidth, 1200, 1700, -128, 127), -128, 127);
 }
 
 template <typename T>
@@ -136,6 +143,18 @@ void PRIZMatic::send_steps() {
         Serial.print(", ");
         Serial.print(saved_steps[i].right);
         Serial.print("},\n");
+    }
+}
+
+void PRIZMatic::begin_rc_servo_test(uint8_t servonum) {
+    while (true) {
+        int8_t const pos = this->read_rc(fwd_rev_pin);
+        uint8_t const servopos = map(pos, -128, 127, 0, 180);
+        DBGN("\rServo position: ");
+        DBGN(servopos);
+        DBGN("       ");
+        this->setServoPosition(servonum, servopos);
+        delay(20);
     }
 }
 
