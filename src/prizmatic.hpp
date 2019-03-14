@@ -1,4 +1,5 @@
 #pragma once
+#include <EEPROM.h>
 #include <PRIZM.h>
 #include <stdint.h>
 #include <initializer_list>
@@ -25,7 +26,8 @@ struct Step {
 };
 
 namespace {
-Step saved_steps[100];
+int const MAX_STEPS = 50;
+Step saved_steps[MAX_STEPS];
 uint8_t n_saved_steps;
 
 uint8_t const signal_switch_pin = 17;  // Port A1
@@ -43,6 +45,8 @@ class PRIZMatic : public PRIZM {
     int8_t read_rc(uint8_t pin);
     void debug_controller();
     void send_steps();
+
+    void dump_eeprom_steps();
 
     // wrap the parent class to save invert state
     void setMotorInvert(int channel, int invert);
@@ -128,7 +132,7 @@ int8_t PRIZMatic::read_rc(uint8_t pin) {
     if (pulseWidth == 0) {
         return 0;
     }
-    return clamp<long>(map(pulseWidth, 1200, 1700, -128, 127), -128, 127);
+    return clamp<long>(map(pulseWidth, 1200, 1700, -127, 127), -127, 127);
 }
 
 template <typename T>
@@ -155,6 +159,33 @@ void PRIZMatic::begin_rc_servo_test(uint8_t servonum) {
         DBGN("       ");
         this->setServoPosition(servonum, servopos);
         delay(20);
+    }
+}
+
+struct EEPROMSavedSteps {
+    uint8_t nsteps;
+    Step steps[MAX_STEPS];
+};
+
+void save_steps_to_eeprom() {
+    EEPROMSavedSteps steps;
+    steps.nsteps = n_saved_steps;
+    memcpy(steps.steps, saved_steps, sizeof(Step) * MAX_STEPS);
+    EEPROM.put<EEPROMSavedSteps>(0, steps);
+}
+
+void PRIZMatic::dump_eeprom_steps() {
+    EEPROMSavedSteps steps;
+    Serial.println("Getting steps...");
+    EEPROM.get<EEPROMSavedSteps>(0, steps);
+    Serial.println("Saved Steps:");
+    for (int i = 0; i < steps.nsteps; ++i) {
+        Serial.print("{");
+        auto const the_step = steps.steps[i];
+        Serial.print(the_step.left);
+        Serial.print(", ");
+        Serial.print(the_step.right);
+        Serial.println("},");
     }
 }
 
@@ -190,11 +221,15 @@ void PRIZMatic::begin_rc_control(long speed) {
             if (curr_time > timer_start + 1000) {
                 DBG("Exiting RC control");
                 this->send_steps();
+                save_steps_to_eeprom();
                 // write over saved steps next time
                 n_saved_steps = 0;
                 done = true;
             } else if (curr_time > timer_start + 50) {
                 DBG("Saving step...");
+                if (n_saved_steps > MAX_STEPS) {
+                    n_saved_steps = 0;
+                }
                 saved_steps[n_saved_steps] = {
                     get_invert_factor(channel_inverts[1]) *
                         this->readEncoderCount(1),
@@ -218,7 +253,7 @@ void PRIZMatic::begin_rc_control(long speed) {
         auto turn = read_rc(turn_pin);
         // DBGN("throttle: ");
         // DBGN(throttle);
-        // DBGN("turn: ");
+        // DBGN(" turn: ");
         // DBG(turn);
         if (turn > switch_on || turn < switch_off) {
             auto turn_dir = sgn<int8_t>(turn);
