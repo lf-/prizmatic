@@ -1,8 +1,16 @@
 #pragma once
+
+// this is terrible.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 #include <EEPROM.h>
 #include <PRIZM.h>
 #include <stdint.h>
 #include <initializer_list>
+#pragma GCC diagnostic pop
 
 #ifdef DEBUG_PRIZMATIC
 #define DBG(s) Serial.println(s)
@@ -40,7 +48,7 @@ class PRIZMatic : public PRIZM {
     PRIZMatic();
     void drive_steps(long speed, std::initializer_list<Step> steps);
     void wait_for_start_button();
-    void begin_rc_control(long speed);
+    void begin_rc_control(long speed, bool continue_next = false);
     void begin_rc_servo_test(uint8_t servonum);
     int8_t read_rc(uint8_t pin);
     void debug_controller();
@@ -167,6 +175,9 @@ struct EEPROMSavedSteps {
     Step steps[MAX_STEPS];
 };
 
+static_assert(sizeof(EEPROMSavedSteps) < E2END + 1,
+              "EEPROM saved steps larger than EEPROM size");
+
 void save_steps_to_eeprom() {
     EEPROMSavedSteps steps;
     steps.nsteps = n_saved_steps;
@@ -189,7 +200,7 @@ void PRIZMatic::dump_eeprom_steps() {
     }
 }
 
-void PRIZMatic::begin_rc_control(long speed) {
+void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
     /*
      * Drop into RC control and record inputs
      * This function deliberately restricts movements to on/off control at the
@@ -223,7 +234,9 @@ void PRIZMatic::begin_rc_control(long speed) {
                 this->send_steps();
                 save_steps_to_eeprom();
                 // write over saved steps next time
-                n_saved_steps = 0;
+                if (!continue_next) {
+                    n_saved_steps = 0;
+                }
                 done = true;
             } else if (curr_time > timer_start + 50) {
                 DBG("Saving step...");
