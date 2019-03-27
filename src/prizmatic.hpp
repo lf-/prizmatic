@@ -305,6 +305,6 @@ float PRIZMatic::readSonicSensorMM(
     digitalWrite(pin, LOW);
     pinMode(pin, INPUT);
     duration = pulseIn(pin, HIGH);
-    return duration / 290.f /
+    return duration / 2.9f /
            2.f;  // convert time of echo to millimeters distance
 }
