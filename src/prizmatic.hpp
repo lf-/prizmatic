@@ -53,7 +53,7 @@ class PRIZMatic : public PRIZM {
     int8_t read_rc(uint8_t pin);
     void debug_controller();
     void send_steps();
-    float readSonicSensorMM(int pin);
+    float readSonicSensorMM(uint8_t pin);
 
     void dump_eeprom_steps();
 
@@ -292,7 +292,7 @@ void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
 }
 
 float PRIZMatic::readSonicSensorMM(
-    int pin) {  // Returns distance of object from sensor in millimeters
+    uint8_t pin) {  // Returns distance of object from sensor in millimeters
 
     delayMicroseconds(1000);  // added in version 2 to help with reading
                               // accuracy, can't read sonic sensors very fast
