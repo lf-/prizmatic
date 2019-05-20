@@ -12,6 +12,8 @@
 #include <initializer_list>
 #pragma GCC diagnostic pop
 
+#include "serialparser/serialparser.hpp"
+
 #ifdef DEBUG_PRIZMATIC
 #define DBG(s) Serial.println(s)
 #define DBGN(s) Serial.print(s)
@@ -41,6 +43,8 @@ uint8_t n_saved_steps;
 uint8_t const signal_switch_pin = 17;  // Port A1
 uint8_t const turn_pin = 15;           // Port A2
 uint8_t const fwd_rev_pin = 16;        // Port A3
+
+uint8_t const SONIC_PIN = 2;  // Port D2
 }  // namespace
 
 class PRIZMatic : public PRIZM {
@@ -60,7 +64,9 @@ class PRIZMatic : public PRIZM {
     // wrap the parent class to save invert state
     void setMotorInvert(int channel, int invert);
 
+   private:
     bool channel_inverts[3];
+    void handle_serial();
 };
 
 template <typename T>
@@ -188,9 +194,9 @@ void save_steps_to_eeprom() {
 
 void PRIZMatic::dump_eeprom_steps() {
     EEPROMSavedSteps steps;
-    Serial.println("Getting steps...");
+    Serial.println(F("Getting steps..."));
     EEPROM.get<EEPROMSavedSteps>(0, steps);
-    Serial.println("Saved Steps:");
+    Serial.println(F("Saved Steps:"));
     for (int i = 0; i < steps.nsteps; ++i) {
         Serial.print("{");
         auto const the_step = steps.steps[i];
@@ -198,6 +204,31 @@ void PRIZMatic::dump_eeprom_steps() {
         Serial.print(", ");
         Serial.print(the_step.right);
         Serial.println("},");
+    }
+}
+
+void PRIZMatic::handle_serial() {
+    serialparser::ParseResult parsed = serialparser::parse(&Serial);
+    switch (parsed.cmd) {
+        case serialparser::Command::GetEncoders:
+            Serial.print("{");
+            Serial.print(this->readEncoderCount(1));
+            Serial.print(", ");
+            Serial.print(this->readEncoderCount(2));
+            Serial.println("},");
+            break;
+        case serialparser::Command::GetInfrared:
+            Serial.println(F("Not implemented: getting infrared distance"));
+            break;
+        case serialparser::Command::GetUltrasonic:
+            Serial.println(this->readSonicSensorMM(SONIC_PIN));
+        case serialparser::Command::SetServo:
+            this->setServoPosition(parsed.args[0], parsed.args[1]);
+        case serialparser::Command::None:
+        default:
+            Serial.println(F("Command not recognized!"));
+            Serial.flush();
+            return;
     }
 }
 
@@ -218,6 +249,9 @@ void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
     unsigned long timer_start = 0;
 
     while (!done) {
+        if (Serial.available() > 0) {
+            this->handle_serial();
+        }
         delay(100);
         auto sw = -read_rc(signal_switch_pin);
         // DBG("switch:");
