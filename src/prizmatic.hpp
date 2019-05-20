@@ -222,12 +222,15 @@ void PRIZMatic::handle_serial() {
             break;
         case serialparser::Command::GetUltrasonic:
             Serial.println(this->readSonicSensorMM(SONIC_PIN));
+            break;
         case serialparser::Command::SetServo:
             this->setServoPosition(parsed.args[0], parsed.args[1]);
+            break;
         case serialparser::Command::None:
         default:
             Serial.println(F("Command not recognized!"));
-            Serial.flush();
+            // this is a terrible way to do this, thanks arduino!
+            while (Serial.available() > 0) Serial.read();
             return;
     }
 }
