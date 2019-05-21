@@ -141,15 +141,45 @@ void PRIZMatic::dump_eeprom_steps() {
     }
 }
 
+void PRIZMatic::test_motors() {
+    this->setMotorInvert(1, 0);
+    this->setMotorInvert(2, 0);
+    Serial.println(F("Testing LEFT, first # should be increasing"));
+    this->setMotorPower(1, 100);
+    delay(200);
+    this->dump_encoder_counts();
+    this->setMotorPower(1, BRAKE);
+    delay(1000);
+    this->resetEncoders();
+    Serial.println(F("Testing RIGHT, second # should be increasing"));
+    this->setMotorPower(2, 100);
+    delay(200);
+    this->dump_encoder_counts();
+    this->setMotorPower(2, BRAKE);
+    delay(1000);
+    Serial.println(F("Setting motors SPEED 'forward'"));
+    this->setMotorSpeeds(500, 500);
+    delay(1000);
+    this->setMotorSpeeds(0, 0);
+    delay(1000);
+    this->resetEncoders();
+    Serial.println(F("Setting motor TARGETS 'forward'"));
+    this->setMotorTargets(300, 4000, 300, 4000);
+}
+
+void PRIZMatic::dump_encoder_counts() {
+    Serial.print("{");
+    Serial.print(this->readEncoderCount(1));
+    Serial.print(", ");
+    Serial.print(this->readEncoderCount(2));
+    Serial.println("},");
+}
+
 void PRIZMatic::handle_serial() {
     serialparser::ParseResult parsed = serialparser::parse(&Serial);
     switch (parsed.cmd) {
         case serialparser::Command::GetEncoders:
-            Serial.print("{");
-            Serial.print(this->readEncoderCount(1));
-            Serial.print(", ");
-            Serial.print(this->readEncoderCount(2));
-            Serial.println("},");
+            this->dump_encoder_counts();
             break;
         case serialparser::Command::GetInfrared:
             Serial.println(F("Not implemented: getting infrared distance"));
@@ -159,6 +189,22 @@ void PRIZMatic::handle_serial() {
             break;
         case serialparser::Command::SetServo:
             this->setServoPosition(parsed.args[0], parsed.args[1]);
+            break;
+        case serialparser::Command::DriveSteps:
+            DBGN(F("Driving steps: spd, l, r: "));
+            DBGN(parsed.args[0]);
+            DBGN(" ");
+            DBGN(parsed.args[1]);
+            DBGN(" ");
+            DBG(parsed.args[2]);
+            this->setMotorTargets(parsed.args[0], parsed.args[1],
+                                  parsed.args[0], parsed.args[1]);
+            break;
+        case serialparser::Command::GetRC:
+            Serial.println(this->read_rc(parsed.args[0]));
+            break;
+        case serialparser::Command::TestMotors:
+            this->test_motors();
             break;
         case serialparser::Command::None:
         default:

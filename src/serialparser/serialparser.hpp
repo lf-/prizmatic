@@ -10,6 +10,9 @@ enum class Command {
     GetEncoders,
     GetUltrasonic,
     GetInfrared,
+    DriveSteps,
+    GetRC,
+    TestMotors,
 };
 
 struct CommandDef {
@@ -23,6 +26,9 @@ CommandDef const allCommands[] = {
     {"get_encoders", Command::GetEncoders, 0},
     {"get_ultrasonic", Command::GetUltrasonic, 0},
     {"get_infrared", Command::GetInfrared, 0},
+    {"drive_steps", Command::DriveSteps, 3},
+    {"get_rc", Command::GetRC, 0},
+    {"test_motors", Command::TestMotors, 0},
 };
 
 struct ParseResult {

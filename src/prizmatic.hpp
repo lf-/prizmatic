@@ -53,6 +53,8 @@ class PRIZMatic : public PRIZM {
    private:
     bool channel_inverts[3];
     void handle_serial();
+    void test_motors();
+    void dump_encoder_counts();
 };
 
 template <typename T>
