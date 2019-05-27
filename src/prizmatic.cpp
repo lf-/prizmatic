@@ -23,6 +23,20 @@ int get_invert_factor(bool inv) {
     }
 }
 
+float get_counts_for_driven_distance(float dist) {
+    return dist / tetrix_wheel_radius * (1440.f / (2.f * PI));
+}
+
+void PRIZMatic::drive_sensor(long speed, float distance, GetDistance fn) {
+    this->setMotorSpeeds(speed, speed);
+    while (distance - fn() > final_speed_dist) {
+        delay(100);
+    }
+    this->resetEncoders();
+    float countsToDrive = get_counts_for_driven_distance(distance - fn());
+    this->setMotorTargets(100, countsToDrive, 100, countsToDrive);
+}
+
 void PRIZMatic::drive_steps(long speed, std::initializer_list<Step> steps) {
     for (auto step : steps) {
         // this->setMotorTargets(speed, step.left, speed, step.right);

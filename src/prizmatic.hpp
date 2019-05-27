@@ -31,12 +31,19 @@ uint8_t const turn_pin = 15;           // Port A2
 uint8_t const fwd_rev_pin = 16;        // Port A3
 
 uint8_t const SONIC_PIN = 2;  // Port D2
+
+float const final_speed_dist = 10.f;     // 10mm
+float const tetrix_wheel_radius = 75.f;  // millimeters
 }  // namespace
+
+typedef float (*GetDistance)();
 
 class PRIZMatic : public PRIZM {
    public:
     PRIZMatic();
     void drive_steps(long speed, std::initializer_list<Step> steps);
+
+    void drive_sensor(long speed, float distance, GetDistance fn);
     void wait_for_start_button();
     void begin_rc_control(long speed, bool continue_next = false);
     void begin_rc_servo_test(uint8_t servonum);

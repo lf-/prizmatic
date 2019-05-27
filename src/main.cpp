@@ -14,6 +14,8 @@ void setup() {
     prizm.setMotorInvert(2, 1);
 
     prizm.begin_rc_control(300);
+
+    prizm.drive_sensor(300, 200, []() { return prizm.readSonicSensorMM(1); });
 }
 
 void loop() {}
