@@ -44,7 +44,7 @@ void setup() {
 
     // prizm.begin_rc_control(100, true);
     prizm.drive_steps(200, {});
-    prizm.begin_rc_control(100, true);
+    prizm.begin_kb_control(100, true);
 
     // prizm.drive_sensor(300, 200, []() { return prizm.readSonicSensorMM(1);
     // });

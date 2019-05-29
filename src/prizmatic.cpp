@@ -310,6 +310,110 @@ void PRIZMatic::handle_serial() {
     }
 }
 
+void PRIZMatic::begin_kb_control(long speed, bool continue_next) {
+    /*
+     * Drop into RC control and record inputs
+     * This function deliberately restricts movements to on/off control at the
+     * same speed as would be automatically driven to attempt to ensure maximum
+     * reproducibility.
+     */
+    DBG("Beginning RC control");
+
+    bool done = false;
+    unsigned long timer_start = 0;
+
+    while (!done) {
+        uint8_t inpBuf;
+        if (Serial.available() > 0) {
+            auto temp = Serial.read();
+            if (temp < 0) {
+                continue;
+            }
+            inpBuf = temp;
+        } else {
+            continue;
+        }
+        DBGN(F("DEBUG INCOMING: WASDSig:"));
+        Serial.println(inpBuf, 16);
+
+        bool inp_w = inpBuf & 1;
+        bool inp_a = (inpBuf >> 1) & 1;
+        bool inp_s = (inpBuf >> 2) & 1;
+        bool inp_d = (inpBuf >> 3) & 1;
+        bool inp_signal = (inpBuf >> 4) & 1;
+        auto sw = inp_signal;
+
+        DBG("switch:");
+        DBG(sw);
+        if (this->readStartButton() || sw) {
+            if (!timer_start) {
+                // start timer
+                timer_start = millis();
+            }
+        } else if ((!this->readStartButton() || !sw) && timer_start) {
+            auto curr_time = millis();
+            // switch is off, detect falling edge.
+            if (curr_time > timer_start + 1000) {
+                DBG("Exiting RC control");
+                this->send_steps();
+                save_steps_to_eeprom();
+                // write over saved steps next time
+                if (!continue_next) {
+                    n_saved_steps = 0;
+                }
+                done = true;
+            } else if (curr_time > timer_start + 50) {
+                DBG("Saving step...");
+                if (n_saved_steps > MAX_STEPS) {
+                    n_saved_steps = 0;
+                }
+                saved_steps[n_saved_steps] = {
+                    get_invert_factor(channel_inverts[1]) *
+                        this->readEncoderCount(1),
+                    get_invert_factor(channel_inverts[2]) *
+                        this->readEncoderCount(2)};
+                ++n_saved_steps;
+                this->resetEncoders();
+                timer_start = 0;
+
+                this->setRedLED(0);
+                delay(200);
+                this->setRedLED(1);
+                delay(200);
+                this->setRedLED(0);
+            } else {
+                timer_start = 0;
+            }
+        }
+
+        int8_t throttle = inp_w ? inp_w : -inp_s;
+        int8_t turn = inp_d ? inp_d : -inp_a;
+        DBGN("throttle: ");
+        DBGN(throttle);
+        DBGN(" turn: ");
+        DBG(turn);
+        if (turn > 0 || turn < 0) {
+            auto turn_dir = sgn<int8_t>(turn);
+            this->setMotorSpeeds(speed * turn_dir, -speed * turn_dir);
+            // we want to ignore throttle inputs when turning
+            // DBGN("turn dir:");
+            // DBG(turn_dir);
+            continue;
+        }
+
+        if (throttle > 0 || throttle < 0) {
+            auto motor_speed = speed * sgn<int8_t>(throttle);
+            this->setMotorSpeeds(motor_speed, motor_speed);
+            // DBGN("Set motor speed:");
+            // DBG(motor_speed);
+            continue;
+        }
+
+        this->setMotorSpeeds(0, 0);
+    }
+    return;
+}
+
 void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
     /*
      * Drop into RC control and record inputs

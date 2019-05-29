@@ -26,6 +26,15 @@ struct MMStep {
     float right;
 };
 
+struct KeyboardInput {
+    bool w : 1;
+    bool a : 1;
+    bool s : 1;
+    bool d : 1;
+    bool signal : 1;
+    uint8_t pad : 3;
+};
+
 namespace {
 int const MAX_STEPS = 50;
 Step saved_steps[MAX_STEPS];
@@ -53,6 +62,7 @@ class PRIZMatic : public PRIZM {
     void drive_sensor(long speed, float distance, GetDistance fn);
     void wait_for_start_button();
     void begin_rc_control(long speed, bool continue_next = false);
+    void begin_kb_control(long speed, bool continue_next = false);
     void begin_rc_servo_test(uint8_t servonum);
     int8_t read_rc(uint8_t pin);
     void debug_controller();
