@@ -36,10 +36,10 @@ while not done:
             if evt.key == pygame.K_ESCAPE:
                 done = True
             keys = pygame.key.get_pressed()
-            out.b.w = keys[pygame.K_w]
-            out.b.a = keys[pygame.K_a]
-            out.b.s = keys[pygame.K_s]
-            out.b.d = keys[pygame.K_d]
+            out.b.w = keys[pygame.K_s]
+            out.b.a = keys[pygame.K_d]
+            out.b.s = keys[pygame.K_w]
+            out.b.d = keys[pygame.K_a]
             out.b.signal = keys[pygame.K_SPACE]
             # print(out.asbyte)
             s.write(bytes((out.asbyte,)))

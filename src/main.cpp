@@ -27,54 +27,53 @@ void setup() {
     prizm.wait_for_start_button();
 
     prizm.setServoPosition(1, 5);
-    prizm.setServoPosition(2, 0);
+    prizm.setServoPosition(2, 5);
     delay(500);
 
     prizm.wait_for_start_button();
-    delay(2000);
     // prizm.begin_rc_control(200, true);
 
     // prizm.begin_kb_control(100, true);
-    prizm.drive_steps(200, {
-                               {2810, 2809},
-                               {720, -718},
-                               {-2486, -2487},
-                               {689, -687},
-                               {-1261, -1262},
-                               {-319, -319},
-                           });
+    prizm.drive_steps_sloped(720, {
+                                      {2810, 2809},
+                                      {720, -718},
+                                      {-2486, -2487},
+                                      {689, -687},
+                                      {-2000, -2000},
+                                  });
 
     prizm.setServoPosition(1, 90);
-    delay(2000);
+    delay(1000);
 
-    prizm.drive_steps(200, {
-                               {1673, 1673},
-                               {-715, 716},
-                               {-2889, -2890},
-                               {710, -711},
-                               {-5340, -5342},
-                               {715, -715},
-                               {-5381, -5382},
-                               {727, -727},
-                               {-2775, -2777},
-                               {-747, 747},
-                               {-2606, -2609},
-                               {590, -812},
-                               {-2244, -2246},
-                           });
-    // prizm.begin_kb_control(100, true);
+    prizm.drive_steps_sloped(720, {
+                                      {2097, 2097},
+                                      {-736, 741},
+                                      {-2760, -2762},
+                                      {706, -705},
+                                      {-5047, -5049},
+                                      {710, -710},
+                                      {-5180, -5181},
+                                      {690, -690},
+                                      {-1907, -1909},
+                                      {-472, 472},
+                                      {-3098, -3100},
+                                      {497, -496},
+                                      {-954, -954},
+                                  });
 
     prizm.setServoPosition(2, 90);
-    delay(2000);
+    delay(1000);
+
+    // prizm.begin_kb_control(100, true);
 
     // prizm.begin_rc_control(100, true);
-    prizm.drive_steps(200, {
-                               {7453, 7455},
-                               {732, -731},
-                               {-7973, -7976},
-                               {688, -688},
-                               {-2276, -2278},
-                           });
+    prizm.drive_steps_sloped(720, {
+                                      {6800, 6800},
+                                      {738, -737},
+                                      {-7500, -7500},
+                                      {545, -545},
+                                      {-1730, -1731},
+                                  });
     prizm.begin_rc_control(100, true);
 
     // prizm.drive_sensor(300, 200, []() { return prizm.readSonicSensorMM(1);

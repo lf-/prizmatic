@@ -78,7 +78,7 @@ void PRIZMatic::drive_steps_sloped(long maxspeed,
                                    std::initializer_list<Step> steps) {
     auto const minspeed = 125L;
     auto const accel = 3L;
-    auto magic_accel_offset = maxspeed / 3;
+    auto magic_accel_offset = maxspeed * 2 / 3;
     auto magic_runoff = 0;
     for (auto step : steps) {
         // this->setMotorTargets(speed, step.left, speed, step.right);
@@ -106,7 +106,7 @@ void PRIZMatic::drive_steps_sloped(long maxspeed,
             DBG(spd);
             delay(100);
         }
-        delay(500);
+        delay(200);
         DBGN("ENCODER COUNTS AFTER MOVE: ");
         DBGN(this->readEncoderCount(1));
         DBGN(", ");
