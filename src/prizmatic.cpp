@@ -77,7 +77,9 @@ T inline min(T a, T b) {
 void PRIZMatic::drive_steps_sloped(long maxspeed,
                                    std::initializer_list<Step> steps) {
     auto const minspeed = 125L;
-    auto const accel = 4;
+    auto const accel = 3L;
+    auto magic_accel_offset = maxspeed / 3;
+    auto magic_runoff = 0;
     for (auto step : steps) {
         // this->setMotorTargets(speed, step.left, speed, step.right);
         DBGN("Driving step: ");
@@ -90,10 +92,16 @@ void PRIZMatic::drive_steps_sloped(long maxspeed,
         while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
             auto enc1 = abs(this->readEncoderCount(1));
             auto enc2 = abs(this->readEncoderCount(2));
-            auto spd = clamp(min(step.left / 2 - abs(enc1 - step.left / 2),
-                                 step.left / 2 - abs(enc2 - step.right / 2)) /
-                                 accel,
-                             minspeed, maxspeed);
+            auto left = abs(step.left);
+            auto right = abs(step.right);
+            auto spd =
+                clamp(min(left / 2 - abs(enc1 - (left - magic_runoff) / 2 +
+                                         magic_accel_offset),
+                          right / 2 - abs(enc2 - (right - magic_runoff) / 2 +
+                                          magic_accel_offset)) /
+                              accel +
+                          minspeed,
+                      minspeed, maxspeed);
             this->setMotorTargets(spd, step.left, spd, step.right);
             DBG(spd);
             delay(100);
