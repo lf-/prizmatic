@@ -116,6 +116,14 @@ void PRIZMatic::drive_steps_sloped(long maxspeed,
     return;
 }
 
+void PRIZMatic::drive_mm(long speed, std::initializer_list<MMStep> steps) {
+    for (auto s : steps) {
+        this->drive_steps_sloped(speed,
+                                 {{get_counts_for_driven_distance(s.left),
+                                   get_counts_for_driven_distance(s.right)}});
+    }
+}
+
 void PRIZMatic::wait_for_start_button() {
     DBG("waiting for start button....");
     while (!this->readStartButton()) {
@@ -276,9 +284,16 @@ void PRIZMatic::handle_serial() {
             DBG(parsed.args[2]);
             this->drive_steps_sloped(parsed.args[0],
                                      {{parsed.args[1], parsed.args[1]}});
-            while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
-            }
-            this->resetEncoders();
+            break;
+
+        case serialparser::Command::DriveMM:
+            DBGN(F("Driving steps: spd, l, r: "));
+            DBGN(parsed.args[0]);
+            DBGN(" ");
+            DBGN(parsed.args[1]);
+            DBGN(" ");
+            DBG(parsed.args[2]);
+            this->drive_mm(parsed.args[0], {{parsed.args[1], parsed.args[1]}});
             break;
         case serialparser::Command::GetRC:
             Serial.println(this->read_rc(parsed.args[0]));

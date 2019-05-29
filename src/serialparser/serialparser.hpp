@@ -13,6 +13,7 @@ enum class Command {
     GetInfrared,
     DriveSteps,
     DriveSSteps,
+    DriveMM,
     GetRC,
     TestMotors,
 };
@@ -31,6 +32,7 @@ CommandDef const allCommands[] = {
     {"get_infrared", Command::GetInfrared, 0},
     {"drive_steps", Command::DriveSteps, 3},
     {"drive_ssteps", Command::DriveSSteps, 3},
+    {"drive_mm", Command::DriveMM, 3},
     {"get_rc", Command::GetRC, 0},
     {"test_motors", Command::TestMotors, 0},
 };

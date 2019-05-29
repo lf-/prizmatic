@@ -21,6 +21,11 @@ struct Step {
     long right;
 };
 
+struct MMStep {
+    float left;
+    float right;
+};
+
 namespace {
 int const MAX_STEPS = 50;
 Step saved_steps[MAX_STEPS];
@@ -32,8 +37,8 @@ uint8_t const fwd_rev_pin = 16;        // Port A3
 
 uint8_t const SONIC_PIN = 2;  // Port D2
 
-float const final_speed_dist = 10.f;     // 10mm
-float const tetrix_wheel_radius = 75.f;  // millimeters
+float const final_speed_dist = 10.f;      // 10mm
+float const tetrix_wheel_radius = 48.8f;  // millimeters
 }  // namespace
 
 typedef float (*GetDistance)();
@@ -43,6 +48,7 @@ class PRIZMatic : public PRIZM {
     PRIZMatic();
     void drive_steps(long speed, std::initializer_list<Step> steps);
     void drive_steps_sloped(long speed, std::initializer_list<Step> steps);
+    void drive_mm(long speed, std::initializer_list<MMStep> steps);
 
     void drive_sensor(long speed, float distance, GetDistance fn);
     void wait_for_start_button();
