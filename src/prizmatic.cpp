@@ -59,6 +59,55 @@ void PRIZMatic::drive_steps(long speed, std::initializer_list<Step> steps) {
     return;
 }
 
+template <typename T>
+T inline clamp(T val, T min, T max) {
+    if (val > max) {
+        return max;
+    } else if (val < min) {
+        return min;
+    }
+    return val;
+}
+
+template <typename T>
+T inline min(T a, T b) {
+    return (a > b ? b : a);
+}
+
+void PRIZMatic::drive_steps_sloped(long maxspeed,
+                                   std::initializer_list<Step> steps) {
+    auto const minspeed = 125L;
+    auto const accel = 4;
+    for (auto step : steps) {
+        // this->setMotorTargets(speed, step.left, speed, step.right);
+        DBGN("Driving step: ");
+        DBGN(step.left);
+        DBGN(", ");
+        DBG(step.right);
+
+        this->resetEncoders();
+        this->setMotorTargets(minspeed, step.left, minspeed, step.right);
+        while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
+            auto enc1 = abs(this->readEncoderCount(1));
+            auto enc2 = abs(this->readEncoderCount(2));
+            auto spd = clamp(min(step.left / 2 - abs(enc1 - step.left / 2),
+                                 step.left / 2 - abs(enc2 - step.right / 2)) /
+                                 accel,
+                             minspeed, maxspeed);
+            this->setMotorTargets(spd, step.left, spd, step.right);
+            DBG(spd);
+            delay(100);
+        }
+        delay(500);
+        DBGN("ENCODER COUNTS AFTER MOVE: ");
+        DBGN(this->readEncoderCount(1));
+        DBGN(", ");
+        DBG(this->readEncoderCount(2));
+    }
+    this->resetEncoders();
+    return;
+}
+
 void PRIZMatic::wait_for_start_button() {
     DBG("waiting for start button....");
     while (!this->readStartButton()) {
@@ -78,16 +127,6 @@ void PRIZMatic::debug_controller() {
         Serial.println(this->read_rc(turn_pin));
         delay(400);
     }
-}
-
-template <typename T>
-T inline clamp(T val, T min, T max) {
-    if (val > max) {
-        return max;
-    } else if (val < min) {
-        return min;
-    }
-    return val;
 }
 
 int8_t PRIZMatic::read_rc(uint8_t pin) {
@@ -204,6 +243,9 @@ void PRIZMatic::handle_serial() {
         case serialparser::Command::SetServo:
             this->setServoPosition(parsed.args[0], parsed.args[1]);
             break;
+        case serialparser::Command::SetServoSpeed:
+            this->setServoSpeed(parsed.args[0], parsed.args[1]);
+            break;
         case serialparser::Command::DriveSteps:
             DBGN(F("Driving steps: spd, l, r: "));
             DBGN(parsed.args[0]);
@@ -213,6 +255,22 @@ void PRIZMatic::handle_serial() {
             DBG(parsed.args[2]);
             this->setMotorTargets(parsed.args[0], parsed.args[1],
                                   parsed.args[0], parsed.args[1]);
+            while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
+            }
+            this->resetEncoders();
+            break;
+        case serialparser::Command::DriveSSteps:
+            DBGN(F("Driving steps: spd, l, r: "));
+            DBGN(parsed.args[0]);
+            DBGN(" ");
+            DBGN(parsed.args[1]);
+            DBGN(" ");
+            DBG(parsed.args[2]);
+            this->drive_steps_sloped(parsed.args[0],
+                                     {{parsed.args[1], parsed.args[1]}});
+            while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
+            }
+            this->resetEncoders();
             break;
         case serialparser::Command::GetRC:
             Serial.println(this->read_rc(parsed.args[0]));
@@ -253,12 +311,12 @@ void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
         auto sw = -read_rc(signal_switch_pin);
         // DBG("switch:");
         // DBG(sw);
-        if (sw > switch_on) {
+        if (this->readStartButton() || sw > switch_on) {
             if (!timer_start) {
                 // start timer
                 timer_start = millis();
             }
-        } else if (sw < switch_on && timer_start) {
+        } else if ((this->readStartButton() || sw < switch_on) && timer_start) {
             auto curr_time = millis();
             // switch is off, detect falling edge.
             if (curr_time > timer_start + 1000) {
@@ -294,7 +352,7 @@ void PRIZMatic::begin_rc_control(long speed, bool continue_next) {
             }
         }
 
-        auto throttle = -read_rc(fwd_rev_pin);
+        auto throttle = read_rc(fwd_rev_pin);
         auto turn = read_rc(turn_pin);
         // DBGN("throttle: ");
         // DBGN(throttle);
