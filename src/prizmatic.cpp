@@ -116,6 +116,55 @@ void PRIZMatic::drive_steps_sloped(long maxspeed,
     return;
 }
 
+void PRIZMatic::drive_steps_sloped_betterer(long maxspeed,
+                                            std::initializer_list<Step> steps) {
+    auto const minspeed = 125L;
+
+    for (auto step : steps) {
+        // this->setMotorTargets(speed, step.left, speed, step.right);
+        DBGN("Driving step: ");
+        DBGN(step.left);
+        DBGN(", ");
+        DBG(step.right);
+
+        this->resetEncoders();
+        this->setMotorTargets(minspeed, step.left, minspeed, step.right);
+        while (this->readMotorBusy(1) || this->readMotorBusy(2)) {
+            auto enc1 = abs(this->readEncoderCount(1));
+            auto enc2 = abs(this->readEncoderCount(2));
+            auto spd = 0L;
+            auto const acceleration = 30L;
+            auto const deacceleration = 1L;
+            auto const pos_initial = 0L;
+            auto pos_final = min(abs(step.left), abs(step.right));
+            auto const jerk_initial = 100L;
+            auto const jerk_final = 50L;
+            if (min(enc1, enc2) <
+                (acceleration * pos_initial - deacceleration * pos_final +
+                 jerk_initial - jerk_final) /
+                    (acceleration - deacceleration)) {
+                spd = acceleration * (min(enc1, enc2) - pos_initial) +
+                      jerk_initial;
+            } else {
+                spd =
+                    deacceleration * (min(enc1, enc2) - pos_final) + jerk_final;
+            }
+
+            spd = clamp(spd, jerk_initial, 750L);
+
+            this->setMotorTargets(spd, step.left, spd, step.right);
+            DBG(spd);
+            delay(100);
+        }
+        delay(500);
+        DBGN("ENCODER COUNTS AFTER MOVE: ");
+        DBGN(this->readEncoderCount(1));
+        DBGN(", ");
+        DBG(this->readEncoderCount(2));
+    }
+    this->resetEncoders();
+    return;
+}
 void PRIZMatic::drive_mm(long speed, std::initializer_list<MMStep> steps) {
     for (auto s : steps) {
         this->drive_steps_sloped(speed,

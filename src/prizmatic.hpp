@@ -57,6 +57,8 @@ class PRIZMatic : public PRIZM {
     PRIZMatic();
     void drive_steps(long speed, std::initializer_list<Step> steps);
     void drive_steps_sloped(long speed, std::initializer_list<Step> steps);
+    void drive_steps_sloped_betterer(long speed,
+                                     std::initializer_list<Step> steps);
     void drive_mm(long speed, std::initializer_list<MMStep> steps);
 
     void drive_sensor(long speed, float distance, GetDistance fn);
