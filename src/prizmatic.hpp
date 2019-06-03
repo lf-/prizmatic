@@ -26,15 +26,6 @@ struct MMStep {
     float right;
 };
 
-struct KeyboardInput {
-    bool w : 1;
-    bool a : 1;
-    bool s : 1;
-    bool d : 1;
-    bool signal : 1;
-    uint8_t pad : 3;
-};
-
 namespace {
 int const MAX_STEPS = 50;
 Step saved_steps[MAX_STEPS];
