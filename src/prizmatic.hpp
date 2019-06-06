@@ -51,21 +51,23 @@ class PRIZMatic : public PRIZM {
     void drive_steps_sloped_betterer(long speed,
                                      std::initializer_list<Step> steps);
     void drive_mm(long speed, std::initializer_list<MMStep> steps);
-
     void drive_sensor(long speed, float distance, GetDistance fn);
+
     void wait_for_start_button();
+
     void begin_rc_control(long speed, bool continue_next = false);
     void begin_kb_control(long speed, bool continue_next = false);
+
     void begin_rc_servo_test(uint8_t servonum);
-    int8_t read_rc(uint8_t pin);
-    void debug_controller();
     void send_steps();
     float readSonicSensorMM(uint8_t pin);
 
     void dump_eeprom_steps();
+    int8_t read_rc(uint8_t pin);
 
     // wrap the parent class to save invert state
     void setMotorInvert(int channel, int invert);
+    void debug_controller();
 
    private:
     bool channel_inverts[3];
