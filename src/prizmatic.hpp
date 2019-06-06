@@ -53,6 +53,8 @@ class PRIZMatic : public PRIZM {
     void drive_mm(long speed, std::initializer_list<MMStep> steps);
     void drive_sensor(long speed, float distance, GetDistance fn);
 
+    void flash_green(int duration);
+    void flash_red(int duration);
     void wait_for_start_button();
 
     void begin_rc_control(long speed, bool continue_next = false);

@@ -576,3 +576,15 @@ float PRIZMatic::readSonicSensorMM(
     return duration / 2.9f /
            2.f;  // convert time of echo to millimeters distance
 }
+
+void PRIZMatic::flash_green(int duration) {
+    this->setGreenLED(1);
+    delay(duration);
+    this->setGreenLED(0);
+}
+
+void PRIZMatic::flash_red(int duration) {
+    this->setRedLED(1);
+    delay(duration);
+    this->setRedLED(0);
+}
