@@ -1,83 +1,120 @@
 #include "prizmatic.hpp"
 
+#include "GroveColorSensor.h"
+
+namespace {
 PRIZMatic prizm{};
+GroveColorSensor sens{};
 
-const int SERVO_COLLECT = 39;
-const int SERVO_LAUNCH = 130;
-const int SERVO_DRIVE = 70;
+template <typename T>
+struct RGB {
+    T r;
+    T g;
+    T b;
 
-// void motor_variable(PRIZMatic prizm, );
+    static RGB<int16_t> from_sensor() {
+        RGB<int16_t> res{};
+        sens.readRGB(&res.r, &res.g, &res.b);
+        return res;
+    }
+
+    float dist_from(RGB other) {
+        RGB<float> diff = {this->r - other.r, this->g - other.g,
+                           this->b - other.b};
+        return sqrtf(diff.r * diff.r + diff.g * diff.g + diff.b * diff.b);
+    }
+};
+
+enum class State {
+    WaitingForBall,
+    DrivingToPosition,
+    Dropping,
+    ReturningToStart,
+};
+
+using RGBi = RGB<int16_t>;
+
+float const equality_dist = 25.f;
+int const speed = 100;
+int const SERVO_PUSH = 90;
+int const SERVO_REST = 0;
+
+struct ColourAssociation {
+    RGBi col;
+    int position;
+};
+
+ColourAssociation associations[] = {
+    {{255, 0, 0}, 1500},  // red
+    {{0, 255, 0}, 2500},  // green
+};
+
+int position_for_colour(RGBi colour) {
+    for (auto ca : associations) {
+        if (ca.col.dist_from(colour) < equality_dist) {
+            return ca.position;
+        }
+    }
+    return -1;
+}
+
+}  // namespace
 
 void setup() {
     Serial.begin(9600);
     delay(200);
-    prizm.dump_eeprom_steps();
+    // prizm.dump_eeprom_steps();
+    Serial.println("how do commputers work");
     prizm.PrizmBegin();
+    sens.ledStatus = 1;
 
-    prizm.setServoPosition(1, 18);
-    prizm.setServoPosition(2, 22);
-    prizm.setServoSpeed(1, 30);
-    prizm.setServoSpeed(2, 30);
+    // prizm.setServoPosition(1, SERVO_REST);
+    prizm.begin_rc_control(50);
+    DBG("Calibrating...");
+    RGBi baseline = RGBi::from_sensor();
+    State state = State::WaitingForBall;
 
-    prizm.setMotorInvert(2, 1);
-    // prizm.begin_kb_control(200, true);
-    prizm.drive_steps(100, {
-                               {-570, -570},
-                           });
-    prizm.wait_for_start_button();
+    int pos = -1;
+    while (true) {
+        switch (state) {
+            case State::WaitingForBall:
+                if (baseline.dist_from(RGBi::from_sensor()) > equality_dist) {
+                    delay(200);
+                    continue;
+                }
+                delay(1000);
+                pos = position_for_colour(RGBi::from_sensor());
+                if (pos == -1) {
+                    DBG("Unrecognized colour!");
+                    prizm.flash_red(500);
+                    continue;
+                }
+                prizm.setMotorTarget(1, speed, pos);
+                state = State::DrivingToPosition;
+                break;
 
-    prizm.setServoPosition(1, 5);
-    prizm.setServoPosition(2, 5);
-    delay(500);
+            case State::DrivingToPosition:
+                if (prizm.readMotorBusy(1)) {
+                    continue;
+                }
+                state = State::Dropping;
+                break;
 
-    prizm.wait_for_start_button();
-    // prizm.begin_rc_control(200, true);
+            case State::Dropping:
+                prizm.setServoPosition(1, SERVO_PUSH);
+                delay(1000);
+                prizm.setMotorTarget(1, speed, 0);
+                state = State::ReturningToStart;
+                break;
 
-    // prizm.begin_kb_control(100, true);
-    prizm.drive_steps_sloped(720, {
-                                      {2810, 2809},
-                                      {720, -718},
-                                      {-2486, -2487},
-                                      {689, -687},
-                                      {-2000, -2000},
-                                  });
-
-    prizm.setServoPosition(1, 90);
-    delay(1000);
-
-    prizm.drive_steps_sloped(720, {
-                                      {2097, 2097},
-                                      {-736, 741},
-                                      {-2760, -2762},
-                                      {706, -705},
-                                      {-5047, -5049},
-                                      {710, -710},
-                                      {-5180, -5181},
-                                      {690, -690},
-                                      {-1907, -1909},
-                                      {-472, 472},
-                                      {-3098, -3100},
-                                      {497, -496},
-                                      {-954, -954},
-                                  });
-
-    prizm.setServoPosition(2, 90);
-    delay(1000);
-
-    // prizm.begin_kb_control(100, true);
-
-    // prizm.begin_rc_control(100, true);
-    prizm.drive_steps_sloped(720, {
-                                      {6800, 6800},
-                                      {738, -737},
-                                      {-7500, -7500},
-                                      {545, -545},
-                                      {-1730, -1731},
-                                  });
-    prizm.begin_rc_control(100, true);
-
-    // prizm.drive_sensor(300, 200, []() { return prizm.readSonicSensorMM(1);
-    // });
+            case State::ReturningToStart:
+                if (prizm.readMotorBusy(1)) {
+                    continue;
+                }
+                state = State::WaitingForBall;
+                break;
+        }
+    }
 }
 
 void loop() {}
