@@ -16,6 +16,13 @@
 #endif
 #include <Registers.h>
 
+struct RGBC {
+	int r;
+	int g;
+	int b;
+	int c;
+};
+
 class GroveColorSensor
 {
 public:
@@ -32,8 +39,8 @@ public:
 		, const int& gainAndPrescaler
 		, const int& sensorAddress);
 
-	void readRGB();
 	void readRGB(int *red, int *green, int *blue);
+	RGBC readRGB();
 	void calculateCoordinate();
 	void clearInterrupt();
 	
