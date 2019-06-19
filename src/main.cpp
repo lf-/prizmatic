@@ -33,8 +33,8 @@ enum class State {
 
 using RGBi = RGB<int16_t>;
 
-float const equality_dist = 25.f;
-int const speed = 250;
+float const equality_dist = 40.f;
+int const speed = 150;
 int const SERVO_PUSH = 45;
 int const SERVO_REST = 180;
 
@@ -46,11 +46,19 @@ struct ColourAssociation {
 };
 
 const ColourAssociation associations[] = {
-    {{249, 72, 5}, 100},   // yellow
-    {{8, 94, 11}, 200},    // green
-    {{10, 17, 131}, 300},  // blue
-    {{190, 10, 6}, 600},   // red
+    {{250, 211, 5}, 0},      // yellow
+    {{250, 106, 2}, 200},    // orange
+    {{149, 9, 6}, 460},      // red
+    {{250, 18, 16}, 692},    // pink
+    {{68, 21, 59}, -1363},   // purple
+    {{10, 120, 149}, -911},  // blue
+    {{9, 104, 9}, -1166},    // green
 };
+
+// left one -800
+// left two -1053
+// right one 195
+// right two 600
 
 int position_for_colour(RGBi colour) {
     for (auto ca : associations) {
@@ -107,6 +115,11 @@ void setup() {
                 DBGN(sens_reading.g);
                 DBGN(", B:");
                 DBG(sens_reading.b);
+                DBGN(", C: ");
+                DBG(sens_reading.c);
+                DBGN("Encoder Pos: ");
+                DBG(prizm.readEncoderCount(1));
+                DBG();
 
                 delay(1000);
                 pos = position_for_colour(RGBi::from_sensor(sens));
@@ -132,6 +145,7 @@ void setup() {
                 prizm.setServoPosition(SERVO_CHANNEL, SERVO_PUSH);
                 delay(500);
                 prizm.setServoPosition(SERVO_CHANNEL, SERVO_REST);
+                delay(1250);
                 prizm.setMotorTarget(1, speed, 0);
                 state = State::ReturningToStart;
                 break;
